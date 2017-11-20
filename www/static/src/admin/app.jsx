@@ -1,43 +1,45 @@
-import 'babel-core/polyfill'
-
 import React from 'react';
-import { Router, Route, Redirect } from 'react-router';
-import createBrowserHistory from 'history/lib/createBrowserHistory'
+import ReactDOM from 'react-dom';
+import 'babel-polyfill';
+import {Router, useRouterHistory} from 'react-router';
 
-import App from './components/App';
-import UserPage from './components/UserPage';
-import PostPage from './components/PostPage';
-import LoginPage from './components/LoginPage';
-import ConfigPage from './components/ConfigPage';
-import PostEditPage from './components/PostEditPage';
-import CategoryPage from './components/CategoryPage';
-import TagPage from './components/TagPage';
-import DashBoardPage from './components/DashBoardPage';
+import {createHistory} from 'history';
 
-const history = createBrowserHistory();
+if(Object.freeze) {
+  Object.freeze(window.SysConfig.userInfo);
+}
 
-new Promise(resolve => {
-  if (window.addEventListener) {
-    window.addEventListener('DOMContentLoaded', resolve);
-  } else {
-    window.attachEvent('onload', resolve);
-  }
-}).then(() => {
-  React.render((
-      <Router history={ history }>
-        <Route path="/admin/login" component={ LoginPage } />
-        <Redirect from="/admin" to="/admin/dashboard" />
-        <Route path="/admin" component={ App }>
-          <Route path="dashboard" component={ DashBoardPage } />
-          <Route path="category" component={ CategoryPage } />
-          <Route path="tag" component={ TagPage } />
-          <Route path="post" component={ PostPage} />
-          <Route path="post/add" component={ PostEditPage } />
-          <Route path="post/edit/:id" component={ PostEditPage } />
-          <Route path="user" component={ UserPage } />
-          <Route path="config" component={ ConfigPage } />
-          <Redirect from="*" to="/admin/dashboard" />
-        </Route>
-      </Router>
-  ), document.body);
+let history = useRouterHistory(createHistory)({
+  basename: '/admin',
+  queryKey: false
 });
+
+let rootRoute = {
+  path: '/',
+  indexRoute: {
+    onEnter: (nextState, replace) => replace('/dashboard')
+  },
+  getChildRoutes(location, callback) {
+    require.ensure([], function(require) {
+      callback(null, [
+        require('./page/tag'),
+        require('./page/post'),
+        require('./page/page'),
+        require('./page/user'),
+        require('./page/push'),
+        require('./page/cate'),
+        require('./page/options'),
+        require('./page/dashboard'),
+        require('./page/appearance')
+      ]);
+    }, 'app');
+  },
+  getComponent(location, callback) {
+    callback(null, require('./component/App'));
+  }
+};
+
+ReactDOM.render(
+  <Router history={history} routes={rootRoute} />,
+  document.getElementById('app')
+);
